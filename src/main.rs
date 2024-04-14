@@ -1,6 +1,7 @@
-use anyhow;
+use anyhow::{self, Context};
 use clap::{Parser, Subcommand};
-use std::fs;
+
+pub mod commands;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -12,6 +13,10 @@ struct Args {
 enum Command {
     // Inialize the repository
     Init,
+    Add {
+        // The path to the file to add
+        path: String,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -19,13 +24,12 @@ fn main() -> anyhow::Result<()> {
 
     match args.command {
         Command::Init => {
-            fs::create_dir(".rvc").unwrap();
-            fs::create_dir(".rvc/objects").unwrap();
-            fs::create_dir(".rvc/refs").unwrap();
-            fs::create_dir(".rvc/refs/heads").unwrap();
-            fs::File::create(".rvc/HEAD").unwrap();
-            fs::File::create(".rvc/index").unwrap();
+            commands::init().context("Failed to initialize the repository.")?;
             println!("Initialized the repositoruy.");
+        }
+        Command::Add { path } => {
+            commands::add(path).context("Failed to add the file.")?;
+            println!("Added the file.");
         }
     }
 
