@@ -17,7 +17,16 @@ enum Command {
         // The path to the file to add
         path: String,
     },
+    Commit,
 }
+
+// repo
+// - .rvc
+// -- commits
+// --- v1
+// ---- repo em v1
+// --- v2
+// -- commit_messages.txt
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -30,6 +39,10 @@ fn main() -> anyhow::Result<()> {
         Command::Add { path } => {
             commands::add(path).context("Failed to add the file.")?;
             println!("Added the file.");
+        }
+        Command::Commit => {
+            commands::commit().context("Failed to commit.")?;
+            println!("Commit executed successfully.");
         }
     }
 

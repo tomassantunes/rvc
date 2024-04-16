@@ -5,13 +5,19 @@ use std::io::Read;
 use std::io::Write;
 use std::path;
 
+// repo
+// - .rvc
+// -- commits
+// --- v1
+// ---- repo em v1
+// --- v2
+// -- commit_messages.txt
+
 pub fn init() -> anyhow::Result<()> {
     fs::create_dir(".rvc").unwrap();
-    fs::create_dir(".rvc/objects").unwrap();
-    fs::create_dir(".rvc/refs").unwrap();
-    fs::create_dir(".rvc/refs/heads").unwrap();
-    fs::File::create(".rvc/HEAD").unwrap();
-    fs::File::create(".rvc/index").unwrap();
+    fs::create_dir(".rvc/objects").unwrap(); // só porque o add já estava feito
+    fs::create_dir(".rvc/commits").unwrap();
+    fs::File::create(".rvc/commit_messages.txt").unwrap();
 
     Ok(())
 }
@@ -41,6 +47,16 @@ pub fn add(path: String) -> anyhow::Result<()> {
     blob_file
         .write_all(&contents)
         .map_err(|e| anyhow!("Failed to write blob file {}: {}", blob_path, e))?;
+
+    Ok(())
+}
+
+pub fn commit() -> anyhow::Result<()> {
+    let dir = fs::read_dir("./").unwrap();
+
+    for path in dir {
+        println!("{}", path.unwrap().path().display());
+    }
 
     Ok(())
 }
