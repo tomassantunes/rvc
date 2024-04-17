@@ -2,6 +2,7 @@ use anyhow::{self, Context};
 use clap::{Parser, Subcommand};
 
 pub mod commands;
+pub mod utils;
 
 #[derive(Parser, Debug)]
 struct Args {

@@ -7,6 +7,8 @@ use std::io::Write;
 use std::path;
 use walkdir::WalkDir;
 
+use crate::utils;
+
 // repo
 // - .rvc
 // -- commits
@@ -37,10 +39,6 @@ pub fn add(path: String) -> anyhow::Result<()> {
     let hash = hasher.finalize();
     let hash_string = format!("{:x}", hash);
 
-    if hash_string.len() < 4 {
-        return Err(anyhow::anyhow!("Hash is too short."));
-    }
-
     let blob_path = format!(".rvc/objects/{}/{}", &hash_string[..2], &hash_string[2..]);
 
     let mut blob_file = fs::File::create(&blob_path)
@@ -53,16 +51,20 @@ pub fn add(path: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-// TODO: arranjar maneira de saber em que commit vou
-// adicionar a message ao ficheiro de mensagens
 pub fn commit(message: String) -> anyhow::Result<()> {
     let current_dir = env::current_dir()?;
     let path = current_dir.as_path();
-    let dpath = path::Path::new(".rvc/commits");
+    let mut dpath = path::Path::new("./.rvc/commits/");
+
+    let child_dirs: u32 = utils::count_children_dir(dpath)?;
+
+    let new_dpath: String = format!("{}v{}", dpath.to_string_lossy(), child_dirs);
+
+    dpath = path::Path::new(&new_dpath);
+    fs::create_dir(&dpath)?;
 
     for entry in WalkDir::new(path).into_iter().filter_entry(|e| {
         let file_name = e.file_name().to_string_lossy();
-        println!("File name: {}", file_name);
         !file_name.starts_with(".") && !file_name.starts_with("_")
     }) {
         let entry = entry?;
@@ -80,9 +82,13 @@ pub fn commit(message: String) -> anyhow::Result<()> {
             }
             fs::copy(p, &target_p)?;
         }
-
-        println!("Copied {}", &p.to_string_lossy());
     }
+
+    fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open("./.rvc/commit_messages.txt").expect("cannot open file")
+        .write(format!("{}\n", message).as_bytes()).expect("commit message write failed");
 
     Ok(())
 }
