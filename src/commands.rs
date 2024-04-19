@@ -19,13 +19,31 @@ use crate::utils;
 
 pub fn init() -> anyhow::Result<()> {
     fs::create_dir(".rvc").unwrap();
-    fs::create_dir(".rvc/objects").unwrap(); // só porque o add já estava feito
+    fs::create_dir(".rvc/objects").unwrap();
     fs::create_dir(".rvc/commits").unwrap();
     fs::File::create(".rvc/commit_messages.txt").unwrap();
+    fs::File::create(".rvc/index").unwrap(); // file that contains the staged changes
 
     Ok(())
 }
 
+pub fn add(path: String) -> anyhow::Result<()> {
+    let p = path::Path::new(&path);
+
+    let mut to_stage: Vec<String> = Vec::new();
+
+    if p.is_dir() {
+        to_stage.append(&mut utils::get_files_from_dir(&p).expect("failed to get files in directory")) 
+    } else {
+        to_stage.push(p.to_string_lossy().to_string());
+    }
+
+    println!("{:?}", to_stage);
+
+    Ok(())
+}
+
+/*
 pub fn add(path: String) -> anyhow::Result<()> {
     let p = path::Path::new(&path);
     let mut file = fs::File::open(p).map_err(|e| anyhow!("Failed to open file {}: {}", path, e))?;
@@ -41,6 +59,8 @@ pub fn add(path: String) -> anyhow::Result<()> {
 
     let blob_path = format!(".rvc/objects/{}/{}", &hash_string[..2], &hash_string[2..]);
 
+    fs::create_dir(format!(".rvc/objects/{}", &hash_string[..2])).expect("failed to create object directory");
+
     let mut blob_file = fs::File::create(&blob_path)
         .map_err(|e| anyhow!("Failed to create file {}: {}", blob_path, e))?;
 
@@ -50,6 +70,7 @@ pub fn add(path: String) -> anyhow::Result<()> {
 
     Ok(())
 }
+*/
 
 pub fn commit(message: String) -> anyhow::Result<()> {
     let current_dir = env::current_dir()?;
@@ -88,7 +109,7 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         .write(true)
         .append(true)
         .open("./.rvc/commit_messages.txt").expect("cannot open file")
-        .write(format!("{}\n", message).as_bytes()).expect("commit message write failed");
+        .write(format!("[v{}] {}\n", child_dirs, message).as_bytes()).expect("commit message write failed");
 
     Ok(())
 }

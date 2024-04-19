@@ -14,3 +14,16 @@ pub fn count_children_dir(path: &Path) -> anyhow::Result<u32> {
 
     return Ok(count);
 }
+
+pub fn get_files_from_dir(path: &Path) -> anyhow::Result<Vec<String>> {
+    let mut result: Vec<String> = Vec::new();
+
+    for d in WalkDir::new(path).into_iter() {
+        let d = d?;
+
+        let x: String = d.into_path().into_os_string().into_string().unwrap();
+        result.push(x);
+    }
+
+    return Ok(result);
+}
