@@ -5,9 +5,9 @@ Rust Version Control
 
 
 index file contains:
-<path-to-file>|<hash-of-file-content>
+\<path-to-file\>|\<hash-of-file-content\>
 
-this is added to the index file by using the "add <file>" command.
+this is added to the index file by using the "add \<file\>" command.
 
 should have a way of tracking the last version of each file.
 
