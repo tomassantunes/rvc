@@ -1,5 +1,6 @@
+use flate2::{write::ZlibEncoder, Compression};
 use sha2::Digest;
-use std::{fs, io::Read, path::{Path, PathBuf}};
+use std::{fs, io::{Read, Write}, path::{Path, PathBuf}};
 use walkdir::WalkDir;
 
 pub fn count_children_dir(path: &Path) -> anyhow::Result<u32> {
@@ -28,7 +29,7 @@ pub fn get_files_from_dir(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
     return Ok(result);
 }
 
-pub fn hash_file_contents(mut file: &fs::File) -> anyhow::Result<String> {
+pub fn hash_file_contents(file: &mut fs::File) -> anyhow::Result<String> {
     let mut hasher = sha2::Sha256::new();
     let mut buffer = Vec::new();
 
@@ -38,4 +39,27 @@ pub fn hash_file_contents(mut file: &fs::File) -> anyhow::Result<String> {
     let hash_result = hasher.finalize();
 
     Ok(format!("{:x}", hash_result))
+}
+
+pub fn hash_string(str: String) -> anyhow::Result<String> {
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(str);
+    
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+pub fn compress_file(file: &mut fs::File) -> anyhow::Result<Vec<u8>> {
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("failed to read file");
+
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(&buffer).expect("failed to write to encoder");
+    let compressed_contents = encoder.finish().expect("failed to compress file contents");
+
+    Ok(compressed_contents)
+}
+
+pub fn decompress_file(_contents: Vec<u8>) -> anyhow::Result<()> {
+    println!("Not implemented.");
+    Ok(())
 }
