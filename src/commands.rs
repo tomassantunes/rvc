@@ -1,7 +1,6 @@
 use std::fs;
+use std::io::{self, BufRead, BufReader};
 use std::fs::OpenOptions;
-use std::io::BufRead;
-use std::io::BufReader;
 use std::io::Write;
 use std::path;
 
@@ -70,10 +69,14 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         .create(true)
         .read(true)
         .open(index_path).expect("failed to open index file");
-    let reader = BufReader::new(index_file);
 
-    for line in reader.lines() {
-        let line = line.expect("failed to get line");
+    let lines: Vec<_> = BufReader::new(index_file).lines().collect::<Result<_, io::Error>>()?;
+    if lines.is_empty() {
+        println!("You must add your changes before using commit.");
+        return Ok(());
+    }
+
+    for line in lines {
         let parts: Vec<&str> = line.split("|").collect(); 
         let path = path::Path::new(parts[0]);
 
@@ -87,7 +90,6 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         let file_path = format!("{}/{}", commit_path, path.to_path_buf().display());
         if let Some(parent_dir) = path::Path::new(&file_path).parent() {
             fs::create_dir_all(parent_dir).expect("failed to create parent dir");
-            println!("{}", parent_dir.display());
         }
 
         let mut file = fs::File::create(file_path).expect("failed to create file for object");
@@ -101,6 +103,15 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         .create(true)
         .open(commit_message_path).expect("cannot open file")
         .write_all(&commit_message.as_bytes()).expect("commit message write failed");
+
+    fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create(true)
+        .open(".rvc/HEAD").expect("failed to open HEAD file")
+        .write_all(format!("{}\n", commit_message_hash).as_bytes()).expect("failed to write to HEAD");
+
+    fs::File::create(index_path).expect("failed to clear index");
 
     Ok(())
 }
