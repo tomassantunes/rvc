@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use sha2::{Digest, Sha256};
 use std::env;
 use std::fs;
+use std::fs::OpenOptions;
 use std::io::Read;
 use std::io::Write;
 use std::path;
@@ -27,48 +28,70 @@ pub fn init() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn add(path: String) -> anyhow::Result<()> {
-    let p = path::Path::new(&path);
+pub fn add(_path: String) -> anyhow::Result<()> {
+    let path = path::Path::new(&_path);
+    let index_path = path::Path::new(".rvc/index");
+    let mut index_file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .read(true)
+        .open(index_path).expect("failed to open index file");
 
-    let mut to_stage: Vec<String> = Vec::new();
+    if path.is_dir() {
+        writeln!(&mut index_file, "{}|dir", path.display()).expect("failed to write to index file");
 
-    if p.is_dir() {
-        to_stage.append(&mut utils::get_files_from_dir(&p).expect("failed to get files in directory")) 
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                add(path.display().to_string())?;
+            } else {
+                add_file_to_index(&path, &mut index_file)?;
+            }
+        }
     } else {
-        to_stage.push(p.to_string_lossy().to_string());
+        add_file_to_index(&path, &mut index_file)?;
     }
 
-    println!("{:?}", to_stage);
+    Ok(())
+}
+
+pub fn add_file_to_index(path: &path::Path, index_file: &mut fs::File) -> anyhow::Result<()> {
+    let mut file = fs::File::open(path)?;
+    let contents = utils::hash_file_contents(&mut file)?;
+
+    writeln!(index_file, "{}|{}", path.display(), contents).expect("failed to write to index file");
 
     Ok(())
 }
 
 /*
 pub fn add(path: String) -> anyhow::Result<()> {
-    let p = path::Path::new(&path);
-    let mut file = fs::File::open(p).map_err(|e| anyhow!("Failed to open file {}: {}", path, e))?;
+let p = path::Path::new(&path);
+let mut file = fs::File::open(p).map_err(|e| anyhow!("Failed to open file {}: {}", path, e))?;
 
-    let mut contents = Vec::new();
-    file.read_to_end(&mut contents)
-        .map_err(|e| anyhow!("Failed to read file {}: {}", path, e))?;
+let mut contents = Vec::new();
+file.read_to_end(&mut contents)
+.map_err(|e| anyhow!("Failed to read file {}: {}", path, e))?;
 
-    let mut hasher = Sha256::new();
-    hasher.update(&contents);
-    let hash = hasher.finalize();
-    let hash_string = format!("{:x}", hash);
+let mut hasher = Sha256::new();
+hasher.update(&contents);
+let hash = hasher.finalize();
+let hash_string = format!("{:x}", hash);
 
-    let blob_path = format!(".rvc/objects/{}/{}", &hash_string[..2], &hash_string[2..]);
+let blob_path = format!(".rvc/objects/{}/{}", &hash_string[..2], &hash_string[2..]);
 
-    fs::create_dir(format!(".rvc/objects/{}", &hash_string[..2])).expect("failed to create object directory");
+fs::create_dir(format!(".rvc/objects/{}", &hash_string[..2])).expect("failed to create object directory");
 
-    let mut blob_file = fs::File::create(&blob_path)
-        .map_err(|e| anyhow!("Failed to create file {}: {}", blob_path, e))?;
+let mut blob_file = fs::File::create(&blob_path)
+.map_err(|e| anyhow!("Failed to create file {}: {}", blob_path, e))?;
 
-    blob_file
-        .write_all(&contents)
-        .map_err(|e| anyhow!("Failed to write blob file {}: {}", blob_path, e))?;
+blob_file
+.write_all(&contents)
+.map_err(|e| anyhow!("Failed to write blob file {}: {}", blob_path, e))?;
 
-    Ok(())
+Ok(())
 }
 */
 
