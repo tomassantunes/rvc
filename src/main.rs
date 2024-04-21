@@ -22,6 +22,9 @@ enum Command {
         // commit message
         message: String,
     },
+    CatFile {
+        path: String,
+    },
 }
 
 // repo
@@ -38,15 +41,15 @@ fn main() -> anyhow::Result<()> {
     match args.command {
         Command::Init => {
             commands::init().context("Failed to initialize the repository.")?;
-            println!("Initialized the repositoruy.");
         }
         Command::Add { path } => {
             commands::add(path).context("Failed to add the file.")?;
-            println!("Added the file.");
         }
         Command::Commit {message} => {
             commands::commit(message).context("Failed to commit.")?;
-            println!("Commit executed successfully.");
+        }
+        Command::CatFile { path } => {
+            commands::cat_file(path).context("Failed to cat file")?;
         }
     }
 

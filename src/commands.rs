@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{self, BufRead, BufReader};
+use std::io::{self, BufRead, BufReader, Read};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path;
@@ -13,6 +13,7 @@ pub fn init() -> anyhow::Result<()> {
     fs::File::create(".rvc/index").unwrap(); // file that contains the staged changes
     fs::File::create(".rvc/HEAD").unwrap(); // file that contains commit references
 
+    println!("Initialized the repositoruy.");
     Ok(())
 }
 
@@ -42,6 +43,7 @@ pub fn add(_path: String) -> anyhow::Result<()> {
         add_file_to_index(&path, &mut index_file)?;
     }
 
+    println!("Added changes successfully.");
     Ok(())
 }
 
@@ -55,14 +57,6 @@ pub fn add_file_to_index(path: &path::Path, index_file: &mut fs::File) -> anyhow
 }
 
 pub fn commit(message: String) -> anyhow::Result<()> {
-    let current_time = chrono::offset::Utc::now();
-    let user_name = whoami::username();
-    let user_real_name = whoami::realname();
-    let commit_message = format!("{}\n{} - {}\n{}", message, user_name, user_real_name, current_time);
-    let commit_message_hash = utils::hash_string(commit_message.clone()).expect("failed to hash the commit message");
-    let commit_path = format!(".rvc/objects/{}/{}", &commit_message_hash[..2], &commit_message_hash[2..]);
-    fs::create_dir_all(&commit_path).expect("failed to create commit directories");
-
     let index_path = path::Path::new(".rvc/index");
     let index_file = OpenOptions::new()
         .append(true)
@@ -75,6 +69,14 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         println!("You must add your changes before using commit.");
         return Ok(());
     }
+
+    let current_time = chrono::offset::Utc::now();
+    let user_name = whoami::username();
+    let user_real_name = whoami::realname();
+    let commit_message = format!("{}\n{} - {}\n{}\n", message, user_name, user_real_name, current_time);
+    let commit_message_hash = utils::hash_string(commit_message.clone()).expect("failed to hash the commit message");
+    let commit_path = format!(".rvc/objects/{}/{}", &commit_message_hash[..2], &commit_message_hash[2..]);
+    fs::create_dir_all(&commit_path).expect("failed to create commit directories");
 
     for line in lines {
         let parts: Vec<&str> = line.split("|").collect(); 
@@ -93,6 +95,7 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         }
 
         let mut file = fs::File::create(file_path).expect("failed to create file for object");
+        file.write_all("blob ".as_bytes()).expect("failed to write 'blob' to file");
         file.write_all(&compressed_contents).expect("failed to write compressed content to file");
     }
 
@@ -112,6 +115,35 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         .write_all(format!("{}\n", commit_message_hash).as_bytes()).expect("failed to write to HEAD");
 
     fs::File::create(index_path).expect("failed to clear index");
+
+    println!("Commit executed successfully.");
+    Ok(())
+}
+
+pub fn cat_file(_path: String) -> anyhow::Result<()> {
+    let path = path::Path::new(&_path);
+
+    if path.is_dir() || !path.is_file() {
+        anyhow::bail!("You must enter the path to a valid file.");
+    }
+
+    let mut file = fs::File::open(path).expect("failed to open file");
+    let blob_prefix = b"blob ";
+
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("failed to read file to end");
+
+    match buffer.starts_with(blob_prefix) {
+        true => {
+            buffer = buffer[blob_prefix.len()..].to_vec();
+        }
+        false => anyhow::bail!("The file path you inserted does not correspond to a blob file."),
+    }
+    
+    let decompressed_data = utils::decompress_content(buffer).expect("failed to decompress file content");
+    let decompressed_string = String::from_utf8(decompressed_data).expect("failed to convert decompressed bytes to string");
+
+    println!("{}", decompressed_string);
 
     Ok(())
 }
