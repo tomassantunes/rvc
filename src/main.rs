@@ -12,28 +12,18 @@ struct Args {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    // Inialize the repository
     Init,
     Add {
-        // The path to the file to add
         path: String,
     },
     Commit {
-        // commit message
         message: String,
     },
     CatFile {
         path: String,
     },
+    Push,
 }
-
-// repo
-// - .rvc
-// -- commits
-// --- v1
-// ---- repo em v1
-// --- v2
-// -- commit_messages.txt
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -50,6 +40,9 @@ fn main() -> anyhow::Result<()> {
         }
         Command::CatFile { path } => {
             commands::cat_file(path).context("Failed to cat file")?;
+        }
+        Command::Push => {
+            commands::push().context("Failed to push to remote.")?;
         }
     }
 

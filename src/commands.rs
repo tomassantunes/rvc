@@ -9,9 +9,10 @@ use crate::utils;
 pub fn init() -> anyhow::Result<()> {
     fs::create_dir(".rvc").unwrap();
     fs::create_dir(".rvc/objects").unwrap();
-    fs::create_dir(".rvc/commits").unwrap();
+    fs::create_dir(".rvc/messages").unwrap();
     fs::File::create(".rvc/index").unwrap(); // file that contains the staged changes
-    fs::File::create(".rvc/HEAD").unwrap(); // file that contains commit references
+    fs::File::create(".rvc/commits").unwrap(); // file that contains commit references
+    fs::File::create(".rvc/HEAD").unwrap(); // file that contains the current commit id
 
     println!("Initialized the repositoruy.");
     Ok(())
@@ -85,7 +86,9 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         if path.is_dir() {
             continue;
         }
-        // what should I do with the hash?
+
+        // TODO: what should I do with the hash?
+
         let mut file = fs::File::open(path).expect("failed to open file");
         let compressed_contents = utils::compress_file(&mut file).expect("failed to compress file");
 
@@ -99,20 +102,26 @@ pub fn commit(message: String) -> anyhow::Result<()> {
         file.write_all(&compressed_contents).expect("failed to write compressed content to file");
     }
 
-    let commit_message_path = format!("{}/commit_message.txt", commit_path);
+    let commit_message_path = format!(".rvc/messages/{}", &commit_message_hash[..2], );
+    fs::create_dir(&commit_message_path).expect("failed to create dir for commit message");
     fs::OpenOptions::new()
         .write(true)
-        .append(true)
         .create(true)
-        .open(commit_message_path).expect("cannot open file")
+        .open(format!("{}/{}", &commit_message_path, &commit_message_hash[2..])).expect("cannot open file")
         .write_all(&commit_message.as_bytes()).expect("commit message write failed");
+
+    fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(".rvc/HEAD").expect("failed to open HEAD file")
+        .write_all(format!("{}\n", commit_message_hash).as_bytes()).expect("failed to write to HEAD");
 
     fs::OpenOptions::new()
         .write(true)
         .append(true)
         .create(true)
-        .open(".rvc/HEAD").expect("failed to open HEAD file")
-        .write_all(format!("{}\n", commit_message_hash).as_bytes()).expect("failed to write to HEAD");
+        .open(".rvc/commits").expect("failed to open 'commits' file")
+        .write_all(format!("{}\n", commit_message_hash).as_bytes()).expect("failed to write to 'commits'");
 
     fs::File::create(index_path).expect("failed to clear index");
 
@@ -144,6 +153,32 @@ pub fn cat_file(_path: String) -> anyhow::Result<()> {
     let decompressed_string = String::from_utf8(decompressed_data).expect("failed to convert decompressed bytes to string");
 
     println!("{}", decompressed_string);
+
+    Ok(())
+}
+
+// ~/rvc_repos
+pub fn push() -> anyhow::Result<()> {
+    let local_remote = path::Path::new("rvc_repos");
+    if local_remote.exists() {
+        fs::create_dir_all(local_remote).expect("failed to create repos dir");
+    }
+
+    let head_path = path::Path::new(".rvc/HEAD");
+    let mut head_file = fs::File::open(head_path).expect("failed to open HEAD file");
+    let mut buffer: Vec<u8> = Vec::new();
+    head_file.read_to_end(&mut buffer).expect("failed to read the HEAD file");
+    let mut current_commit = String::from_utf8(buffer).expect("failed to get string of commit id");
+    current_commit.truncate(current_commit.len() - 1);
+
+    let current_commit_objects = format!(".rvc/objects/{}/{}/", &current_commit[..2], &current_commit[2..]);
+    let objects_path = path::Path::new(&current_commit_objects);
+
+    if !objects_path.exists() {
+        anyhow::bail!("There is no objects directory with the commit id {}", current_commit);
+    }
+
+    // TODO: create needed dirs in 'remote' path, copy object files over
 
     Ok(())
 }
