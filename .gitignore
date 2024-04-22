@@ -16,3 +16,4 @@ Cargo.lock
 .rvc
 
 test/
+.env
