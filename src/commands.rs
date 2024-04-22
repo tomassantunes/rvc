@@ -48,7 +48,7 @@ pub fn add(_path: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn add_file_to_index(path: &path::Path, index_file: &mut fs::File) -> anyhow::Result<()> {
+fn add_file_to_index(path: &path::Path, index_file: &mut fs::File) -> anyhow::Result<()> {
     let mut file = fs::File::open(path)?;
     let contents = utils::hash_file_contents(&mut file)?;
 
@@ -178,7 +178,27 @@ pub fn push() -> anyhow::Result<()> {
         anyhow::bail!("There is no objects directory with the commit id {}", current_commit);
     }
 
-    // TODO: create needed dirs in 'remote' path, copy object files over
+    push_changes(&objects_path, &local_remote).expect("failed to push changes");
+
+    Ok(())
+}
+
+fn push_changes(local_dir: &path::Path, remote_dir: &path::Path) -> anyhow::Result<()> {
+    if !remote_dir.exists() {
+        fs::create_dir_all(remote_dir).expect("failed to create required remote dirs");
+    }
+
+    for entry in fs::read_dir(local_dir).expect("failed to read local directory") {
+        let entry = entry?;
+        let local_path = entry.path();
+        let remote_path = remote_dir.join(entry.file_name());
+
+        if local_path.is_dir() {
+            push_changes(&local_path, &remote_path)?;
+        } else {
+            fs::copy(&local_path, &remote_path).expect("failed to copy file from local to remote");
+        }
+    }
 
     Ok(())
 }
