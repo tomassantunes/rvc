@@ -23,6 +23,10 @@ enum Command {
         path: String,
     },
     Push,
+    Config {
+        option: String,
+        value: String
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -39,10 +43,13 @@ fn main() -> anyhow::Result<()> {
             commands::commit(message).context("Failed to commit.")?;
         }
         Command::CatFile { path } => {
-            commands::cat_file(path).context("Failed to cat file")?;
+            commands::cat_file(path).context("Failed to cat file.")?;
         }
         Command::Push => {
             commands::push().context("Failed to push to remote.")?;
+        }
+        Command::Config { option, value } => {
+            commands::config(option, value).context("Failed to configure.")?;
         }
     }
 

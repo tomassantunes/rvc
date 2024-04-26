@@ -13,6 +13,14 @@ pub fn init() -> anyhow::Result<()> {
     fs::File::create(".rvc/index").unwrap(); // file that contains the staged changes
     fs::File::create(".rvc/commits").unwrap(); // file that contains commit references
     fs::File::create(".rvc/HEAD").unwrap(); // file that contains the current commit id
+    fs::File::create(".rvc/config").unwrap();
+
+    let config_path = path::Path::new(".rvc/config");
+    fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(config_path).expect("failed to open 'config' file")
+        .write_all(b"remote:./rvc_repos/\n").expect("failed to insert default configurations");
 
     println!("Initialized the repositoruy.");
     Ok(())
@@ -148,7 +156,7 @@ pub fn cat_file(_path: String) -> anyhow::Result<()> {
         }
         false => anyhow::bail!("The file path you inserted does not correspond to a blob file."),
     }
-    
+
     let decompressed_data = utils::decompress_content(buffer).expect("failed to decompress file content");
     let decompressed_string = String::from_utf8(decompressed_data).expect("failed to convert decompressed bytes to string");
 
@@ -157,9 +165,9 @@ pub fn cat_file(_path: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-// ~/rvc_repos
 pub fn push() -> anyhow::Result<()> {
-    let local_remote = path::Path::new("rvc_repos");
+    let config_remot_path = utils::get_config("remote".to_string()).expect("failed to get 'remote' config");
+    let local_remote = path::Path::new(&config_remot_path);
     if local_remote.exists() {
         fs::create_dir_all(local_remote).expect("failed to create repos dir");
     }
@@ -180,6 +188,7 @@ pub fn push() -> anyhow::Result<()> {
 
     push_changes(&objects_path, &local_remote).expect("failed to push changes");
 
+    println!("Your changes were pushed successfully!");
     Ok(())
 }
 
@@ -200,5 +209,31 @@ fn push_changes(local_dir: &path::Path, remote_dir: &path::Path) -> anyhow::Resu
         }
     }
 
+    Ok(())
+}
+
+pub fn config(option: String, value: String) -> anyhow::Result<()> {
+    let config_path = path::Path::new(".rvc/config");
+    let config_file_read = fs::File::open(config_path).expect("failed to open 'config' file for reading");
+
+    let configs: Vec<_> = BufReader::new(&config_file_read).lines().collect::<Result<_, io::Error>>().expect("failed to get lines from file");
+    let mut new_configs: Vec<String> = Vec::new();
+    if configs.len() > 0 {
+        for config in configs {
+            if !config.starts_with(&option) {
+                new_configs.push(config);
+            }
+        }
+    }
+
+    let new_config = format!("{}\n{}:{}\n", new_configs.join("\n"), option, value);
+    fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(config_path).expect("failed to open 'config' file for writing")
+        .write_all(new_config.as_bytes()).expect("failed to write config to file");
+
+    println!("Your configurations were added successfully!");
     Ok(())
 }
