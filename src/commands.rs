@@ -7,20 +7,20 @@ use std::path;
 use crate::utils;
 
 pub fn init() -> anyhow::Result<()> {
-    fs::create_dir(".rvc").unwrap();
-    fs::create_dir(".rvc/objects").unwrap();
-    fs::create_dir(".rvc/messages").unwrap();
-    fs::File::create(".rvc/index").unwrap(); // file that contains the staged changes
-    fs::File::create(".rvc/commits").unwrap(); // file that contains commit references
-    fs::File::create(".rvc/HEAD").unwrap(); // file that contains the current commit id
-    fs::File::create(".rvc/config").unwrap();
+    let base_path = path::Path::new(".rvc");
+    fs::create_dir_all(base_path.join("objects"))?;
+    fs::create_dir_all(base_path.join("messages"))?;
+    fs::File::create(base_path.join("index"))?; // file that contains the staged changes
+    fs::File::create(base_path.join("commits"))?; // file that contains commit references
+    fs::File::create(base_path.join("HEAD"))?; // file that contains the current commit id
+    fs::File::create(base_path.join("config"))?;
 
     let config_path = path::Path::new(".rvc/config");
     fs::OpenOptions::new()
         .write(true)
         .create(true)
         .open(config_path).expect("failed to open 'config' file")
-        .write_all(b"remote:./rvc_repos/\n").expect("failed to insert default configurations");
+        .write_all(b"remote:./rvc_repos/\n")?;
 
     println!("Initialized the repositoruy.");
     Ok(())
