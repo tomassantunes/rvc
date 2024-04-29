@@ -4,8 +4,10 @@ Simple Version Control System made in Rust
 ## What is it?
 rvc is a simple Version Control System, inspired in git, that allows you to keep track of your changes locally (currently). You can configure where your commits are stored so you always know where to look for.
 
+<!--
 ## How to install it?
 ??
+-->
 
 ## How to use it?
 ### Init

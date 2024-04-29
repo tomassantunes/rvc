@@ -1,7 +1,7 @@
 [package]
 name = "rvc"
-version = "0.1.0"
-edition = "2024"
+version = "0.0.1"
+edition = "2021"
 author = ["Tomás Antunes <tomassantunes>"]
 description = "Simple Version Control System built with rust-lang"
 homepage = "https://github.com/tomassantunes/rvc"

@@ -1,5 +1,5 @@
-use flate2::{self, Compression};
 use sha2::Digest;
+use flate2::{self, Compression};
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read, Write};
 
