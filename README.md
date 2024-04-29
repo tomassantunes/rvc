@@ -1,17 +1,65 @@
 # rvc
-Rust Version Control
+Simple Version Control System made in Rust
 
-[Version control concepts and best practices](https://homes.cs.washington.edu/~mernst/advice/version-control.html)
+## What is it?
+rvc is a simple Version Control System, inspired in git, that allows you to keep track of your changes locally (currently). You can configure where your commits are stored so you always know where to look for.
 
+## How to install it?
+??
 
-index file contains:
-\<path-to-file\>|\<hash-of-file-content\>
+## How to use it?
+### Init
+To use `rvc` you first need to create your own project, then navigate to your project folder in your terminal of choice and initialize the rvc repository:
 
-this is added to the index file by using the "add \<file\>" command.
+```bash
+rvc init
+```
 
-should have a way of tracking the last version of each file.
+This will create the folder `.rvc`, which contains all the files and folders needed for `rvc` to manage the versions of your project.
 
-when commiting, it will make a blob of the file and store in the respective commit folder
-the commit path should be divided into two directories, the first should contain the first 2 letters of the hashstring, and the second the rest.
-to get the commit hash string we must join the commit number, commit message, and possibly the author.
-inside the second folder should be the blob files correspondent to the commit
+### Config
+You can configure your rvc with the following command:
+
+```bash
+rvc config "option" "value"
+```
+
+Currently there is only one option available, which is the folder where your changes are stored:
+- remote
+
+### Add
+After you've made some changes to your project you add the files you want to commit:
+
+```bash
+rvc add file1.rs 
+```
+
+```bash
+rvc add folder/
+```
+
+### Commit
+When you are ready to make a commit, you can use the following command:
+
+```bash
+rvc commit "commit message"
+```
+
+### Push
+Finally, you can push your changes to your designated folder with this command:
+
+```bash
+rvc push
+```
+
+### Cat File
+If you want to see the contents of a gzip compressed file, for example, the files stored in your designated remote folder, you can use this command:
+
+```bash
+rvc cat-file file
+```
+
+## Next steps
+- Add the ability to `checkout`, making it posible to revert/go back to a different point in the project.
+- Adding the ability to push to a remote using SSH.
+- Add branches
