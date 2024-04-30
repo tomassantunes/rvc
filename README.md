@@ -32,7 +32,7 @@ You can configure your rvc with the following command:
 
 <!--
 ```bash
-rvc config option value
+rvc config <option> <value>
 ```
 -->
 ```bash
