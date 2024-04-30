@@ -213,6 +213,10 @@ fn push_changes(local_dir: &path::Path, remote_dir: &path::Path) -> anyhow::Resu
 }
 
 pub fn config(option: String, value: String) -> anyhow::Result<()> {
+    if !["remote"].iter().any(|&s| s == option) {
+        anyhow::bail!("The option {} is not supported.", option);
+    }
+
     let config_path = path::Path::new(".rvc/config");
     let config_file_read = fs::File::open(config_path).expect("failed to open 'config' file for reading");
 
