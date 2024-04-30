@@ -64,4 +64,4 @@ rvc cat-file file
 ## Next steps
 - Add the ability to `checkout`, making it posible to revert/go back to a different point in the project.
 - Adding the ability to push to a remote using SSH.
-- Add branches
+- Add branches.

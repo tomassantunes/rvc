@@ -10,16 +10,11 @@ pub fn init() -> anyhow::Result<()> {
     let base_path = path::Path::new(".rvc");
     fs::create_dir_all(base_path.join("objects"))?;
     fs::create_dir_all(base_path.join("messages"))?;
-    fs::File::create(base_path.join("index"))?; // file that contains the staged changes
-    fs::File::create(base_path.join("commits"))?; // file that contains commit references
-    fs::File::create(base_path.join("HEAD"))?; // file that contains the current commit id
-    fs::File::create(base_path.join("config"))?;
 
-    let config_path = path::Path::new(".rvc/config");
     fs::OpenOptions::new()
         .write(true)
         .create(true)
-        .open(config_path).expect("failed to open 'config' file")
+        .open(base_path.join("config")).expect("failed to open 'config' file")
         .write_all(b"remote:./rvc_repos/\n")?;
 
     println!("Initialized the repositoruy.");
@@ -27,16 +22,15 @@ pub fn init() -> anyhow::Result<()> {
 }
 
 pub fn add(_path: String) -> anyhow::Result<()> {
-    let path = path::Path::new(&_path);
-    let index_path = path::Path::new(".rvc/index");
     let mut index_file = OpenOptions::new()
         .append(true)
         .create(true)
         .read(true)
-        .open(index_path).expect("failed to open index file");
+        .open(".rvc/index").expect("failed to open index file");
 
+    let path = path::Path::new(&_path);
     if path.is_dir() {
-        writeln!(&mut index_file, "{}|dir", path.display()).expect("failed to write to index file");
+        add_file_to_index(&path, &mut index_file, true)?;
 
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -45,21 +39,25 @@ pub fn add(_path: String) -> anyhow::Result<()> {
             if path.is_dir() {
                 add(path.display().to_string())?;
             } else {
-                add_file_to_index(&path, &mut index_file)?;
+                add_file_to_index(&path, &mut index_file, false)?;
             }
         }
     } else {
-        add_file_to_index(&path, &mut index_file)?;
+        add_file_to_index(&path, &mut index_file, false)?;
     }
 
     println!("Added changes successfully.");
     Ok(())
 }
 
-fn add_file_to_index(path: &path::Path, index_file: &mut fs::File) -> anyhow::Result<()> {
+fn add_file_to_index(path: &path::Path, index_file: &mut fs::File,  is_dir: bool) -> anyhow::Result<()> {
+    if is_dir {
+        writeln!(index_file, "{}|dir", path.display()).expect("failed to write to index file");
+        return Ok(());
+    }
+
     let mut file = fs::File::open(path)?;
     let contents = utils::hash_file_contents(&mut file)?;
-
     writeln!(index_file, "{}|{}", path.display(), contents).expect("failed to write to index file");
 
     Ok(())
@@ -172,8 +170,10 @@ pub fn push() -> anyhow::Result<()> {
         fs::create_dir_all(local_remote).expect("failed to create repos dir");
     }
 
-    let head_path = path::Path::new(".rvc/HEAD");
-    let mut head_file = fs::File::open(head_path).expect("failed to open HEAD file");
+    let mut head_file = fs::OpenOptions::new()
+        .read(true)
+        .open(".rvc/HEAD").expect("failed to open 'HEAD' file");
+
     let mut buffer: Vec<u8> = Vec::new();
     head_file.read_to_end(&mut buffer).expect("failed to read the HEAD file");
     let mut current_commit = String::from_utf8(buffer).expect("failed to get string of commit id");
@@ -225,6 +225,8 @@ pub fn config(option: String, value: String) -> anyhow::Result<()> {
             }
         }
     }
+
+    drop(config_file_read);
 
     let new_config = format!("{}\n{}:{}\n", new_configs.join("\n"), option, value);
     fs::OpenOptions::new()
