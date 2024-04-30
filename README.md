@@ -36,7 +36,7 @@ rvc config <option> <value>
 ```
 -->
 ```bash
-cargo run config option value
+cargo run config <option> <value>
 ```
 
 Currently there is only one option available, which is the folder where your changes are stored:
