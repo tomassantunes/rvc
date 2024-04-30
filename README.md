@@ -10,8 +10,7 @@ rvc is a simple Version Control System, inspired in git, that allows you to keep
 -->
 
 ## Requirements
-- cargo
-- rust
+- [rust-lang](https://www.rust-lang.org/tools/install)
 
 ## How to use it?
 ### Init
